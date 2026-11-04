@@ -16,6 +16,8 @@
   </PropertyGroup>
   <ItemGroup>
     <EmbeddedResource Include="..\Plugin\bin\Release\net6.0\Polus.Plugin.dll" LogicalName="Polus.Plugin.dll" />
+    <EmbeddedResource Include="..\Plugin\bin\Release\net6.0\MiraAPI.dll" LogicalName="MiraAPI.dll" />
+    <EmbeddedResource Include="..\Plugin\bin\Release\net6.0\Reactor.dll" LogicalName="Reactor.dll" />
     <EmbeddedResource Include="..\RoleCore\bin\Release\net6.0\Polus.RoleCore.dll" LogicalName="Polus.RoleCore.dll" />
     <EmbeddedResource Include="..\..\roles\roles.json" LogicalName="roles.json" />
   </ItemGroup>
