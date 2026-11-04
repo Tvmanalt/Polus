@@ -7,5 +7,6 @@
     <Nullable>enable</Nullable>
     <AssemblyName>Polus</AssemblyName>
     <RootNamespace>Polus.Patcher</RootNamespace>
+    <ApplicationIcon>polus.ico</ApplicationIcon>
   </PropertyGroup>
 </Project>
