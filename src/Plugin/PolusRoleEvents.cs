@@ -1,7 +1,9 @@
 using System.Collections.Concurrent;
+using System.Linq;
 using MiraAPI.Events;
 using MiraAPI.Events.Vanilla.Meeting;
 using MiraAPI.Events.Vanilla.Player;
+using MiraAPI.Utilities;
 using Polus.Plugin.Roles;
 
 namespace Polus.Plugin;
@@ -20,7 +22,7 @@ public static class PolusRoleEvents
     [RegisterEvent]
     public static void OnMeetingStarted(StartMeetingEvent ev)
     {
-        foreach (var player in PlayerControl.AllPlayerControls)
+        foreach (var player in PlayerControl.AllPlayerControls.ToArray())
         {
             if (player == null || player.Data == null) continue;
 
@@ -37,4 +39,7 @@ public static class PolusRoleEvents
             }
         }
     }
+
+    public static int GetCompletedTaskCount(byte playerId) =>
+        CompletedTasks.TryGetValue(playerId, out var count) ? count : 0;
 }
