@@ -2,6 +2,9 @@ using MiraAPI.Hud;
 using MiraAPI.Keybinds;
 using MiraAPI.Utilities.Assets;
 using UnityEngine;
+using Object = UnityEngine.Object;
+using Polus.Plugin;
+using Polus.Plugin.Roles;
 
 namespace Polus.Plugin.Buttons;
 
