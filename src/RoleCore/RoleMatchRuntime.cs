@@ -145,7 +145,7 @@ public sealed class RoleMatchRuntime
     public ObjectiveProgress RecordObjective(byte playerId, string objectiveId, int amount, int required)
     {
         EnsureHost();
-        ArgumentException.ThrowIfNullOrWhiteSpace(objectiveId);
+        if (string.IsNullOrWhiteSpace(objectiveId)) throw new ArgumentException("Objective ID cannot be empty.", nameof(objectiveId));
         if (amount <= 0 || required <= 0) throw new ArgumentOutOfRangeException(nameof(amount));
 
         lock (gate)
