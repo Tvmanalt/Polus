@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>Polus.Plugin</AssemblyName>
+    <RootNamespace>Polus.Plugin</RootNamespace>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\RoleCore\RoleCore.csproj" />
+    <PackageReference Include="BepInEx.Unity.IL2CPP" Version="6.0.0-be.788" />
+    <PackageReference Include="AmongUs.GameLibs.Steam" Version="2026.9.29" />
+    <PackageReference Include="Reactor" Version="2.5.1-ci.400" />
+  </ItemGroup>
+</Project>
