@@ -1,0 +1,33 @@
+name: Build Polus
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Publish self-contained Windows x64 app
+        run: dotnet publish .\src\Patcher\Patcher.csproj -c Release -r win-x64 --self-contained true
+      - name: Package artifact
+        shell: pwsh
+        run: |
+          $publish = "src/Patcher/bin/Release/net8.0-windows/win-x64/publish"
+          if (!(Test-Path "$publish/Polus.exe")) { throw "Polus.exe was not produced." }
+          Compress-Archive -Path "$publish/*" -DestinationPath "Polus-Windows-x64.zip"
+      - name: Upload Windows build
+        uses: actions/upload-artifact@v4
+        with:
+          name: Polus-Windows-x64
+          path: Polus-Windows-x64.zip
