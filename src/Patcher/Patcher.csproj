@@ -9,4 +9,7 @@
     <RootNamespace>Polus.Patcher</RootNamespace>
     <ApplicationIcon>polus.ico</ApplicationIcon>
   </PropertyGroup>
+  <ItemGroup>
+    <Content Include="polus.ico" CopyToOutputDirectory="PreserveNewest" />
+  </PropertyGroup>
 </Project>
