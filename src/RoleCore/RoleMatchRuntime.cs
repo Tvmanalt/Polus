@@ -3,25 +3,21 @@ using System.Security.Cryptography;
 namespace Polus.RoleCore;
 
 public sealed record PlayerSlot(byte PlayerId, bool IsAlive = true);
-
 public sealed record RoleAssignment(byte PlayerId, RoleDefinition Role);
-
 public sealed record RoleActionResult(bool Accepted, string Code, string Message);
-
-public sealed record ObjectiveProgress(byte PlayerId, string RoleId, int Current, int Required, bool Completed);
+public sealed record ObjectiveProgress(byte PlayerId, string RoleId, string ObjectiveId, int Current, int Required, bool Completed);
 
 /// <summary>
-/// Game-independent, host-authoritative match state.
-/// The Among Us/BepInEx adapter must call these methods from validated game events.
-/// This class deliberately does not pretend to provide game hooks or networking.
+/// Host-owned match state. The game adapter must validate every event before forwarding it here.
+/// This class does not itself hook Among Us or transmit network messages.
 /// </summary>
 public sealed class RoleMatchRuntime
 {
     private readonly object gate = new();
     private readonly Dictionary<byte, RoleDefinition> assignments = new();
     private readonly Dictionary<byte, DateTimeOffset> cooldownEnds = new();
-    private readonly Dictionary<byte, int> objectiveProgress = new();
-    private readonly Dictionary<byte, HashSet<string>> completedObjectives = new();
+    private readonly Dictionary<(byte PlayerId, string ObjectiveId), int> objectiveProgress = new();
+    private readonly HashSet<(byte PlayerId, string ObjectiveId)> completedObjectives = new();
     private readonly Dictionary<byte, DateTimeOffset> lastActionAt = new();
 
     public bool IsHost { get; }
@@ -42,78 +38,88 @@ public sealed class RoleMatchRuntime
         int? seed = null)
     {
         EnsureHost();
+        ArgumentNullException.ThrowIfNull(players);
+        ArgumentNullException.ThrowIfNull(catalog);
+        var validated = HostSettingsValidator.Validate(settings);
+
         lock (gate)
         {
             if (IsRunning) throw new InvalidOperationException("A match is already running.");
             if (players.Count < 4) throw new ArgumentException("At least four players are required.");
             if (players.Select(p => p.PlayerId).Distinct().Count() != players.Count)
                 throw new ArgumentException("Player IDs must be unique.");
-            if (impostorCount < 1 || neutralCount < 0 || impostorCount + neutralCount >= players.Count)
+            if (players.Any(p => !p.IsAlive))
+                throw new InvalidOperationException("Dead players cannot be included in initial role assignment.");
+            if (impostorCount < 1 || neutralCount < 0 || impostorCount + neutralCount > players.Count)
                 throw new ArgumentOutOfRangeException(nameof(impostorCount));
+            if (impostorCount + neutralCount > validated.MaxRolesPerGame)
+                throw new InvalidOperationException("Requested team roles exceed MaxRolesPerGame.");
 
-            var validated = HostSettingsValidator.Validate(settings);
             var random = seed.HasValue ? new Random(seed.Value) : new Random(RandomNumberGenerator.GetInt32(int.MaxValue));
-            var available = catalog
-                .Where(r => validated.EnabledRoles.TryGetValue(r.Id, out var enabled) && enabled)
+            var enabled = catalog
+                .Where(r => validated.EnabledRoles.TryGetValue(r.Id, out var on) && on)
                 .Where(r => r.SpawnChance > 0)
                 .GroupBy(r => r.Id, StringComparer.OrdinalIgnoreCase)
                 .Select(g => g.First())
                 .ToList();
 
-            var crew = available.Where(r => r.Team == RoleTeam.Crewmate).ToList();
-            var impostors = available.Where(r => r.Team == RoleTeam.Impostor).ToList();
+            var impostors = enabled.Where(r => r.Team == RoleTeam.Impostor).ToList();
             var neutrals = validated.AllowNeutralRoles
-                ? available.Where(r => r.Team == RoleTeam.Neutral).ToList()
+                ? enabled.Where(r => r.Team == RoleTeam.Neutral).ToList()
                 : new List<RoleDefinition>();
+            var crewmates = enabled.Where(r => r.Team == RoleTeam.Crewmate).ToList();
 
-            if (impostors.Count < impostorCount)
-                throw new InvalidOperationException("Not enough enabled Impostor roles for the requested count.");
-            if (neutrals.Count < neutralCount)
-                throw new InvalidOperationException("Not enough enabled Neutral roles for the requested count.");
-
-            var shuffledPlayers = players.Where(p => p.IsAlive).OrderBy(_ => random.Next()).ToList();
-            if (shuffledPlayers.Count != players.Count)
-                throw new InvalidOperationException("Dead players cannot be included in initial role assignment.");
-
-            var chosen = new List<(PlayerSlot Player, RoleDefinition Role)>();
-            AddTeam(shuffledPlayers, impostorCount, impostors, chosen, random);
-            AddTeam(shuffledPlayers, neutralCount, neutrals, chosen, random);
-            AddTeam(shuffledPlayers, Math.Min(validated.MaxRolesPerGame - chosen.Count, shuffledPlayers.Count - chosen.Count),
-                crew, chosen, random);
+            var selected = new List<(PlayerSlot Player, RoleDefinition Role)>();
+            AddWeightedTeam(players, impostorCount, impostors, selected, random);
+            AddWeightedTeam(players, neutralCount, neutrals, selected, random);
+            var crewSlots = Math.Min(
+                Math.Max(0, validated.MaxRolesPerGame - selected.Count),
+                players.Count - selected.Count);
+            AddWeightedTeam(players, crewSlots, crewmates, selected, random);
 
             assignments.Clear();
             cooldownEnds.Clear();
             objectiveProgress.Clear();
             completedObjectives.Clear();
             lastActionAt.Clear();
-
-            foreach (var item in chosen)
-            {
-                assignments[item.Player.PlayerId] = item.Role;
-                objectiveProgress[item.Player.PlayerId] = 0;
-                completedObjectives[item.Player.PlayerId] = new HashSet<string>(StringComparer.Ordinal);
-            }
+            foreach (var item in selected)
+                assignments.Add(item.Player.PlayerId, item.Role);
 
             IsRunning = true;
-            return chosen.Select(x => new RoleAssignment(x.Player.PlayerId, x.Role)).ToArray();
+            return selected.Select(x => new RoleAssignment(x.Player.PlayerId, x.Role)).ToArray();
         }
     }
 
-    private static void AddTeam(
-        List<PlayerSlot> players,
+    private static void AddWeightedTeam(
+        IReadOnlyList<PlayerSlot> players,
         int count,
         List<RoleDefinition> pool,
         List<(PlayerSlot Player, RoleDefinition Role)> result,
         Random random)
     {
-        if (count <= 0) return;
-        var candidates = pool.OrderBy(_ => random.Next()).Take(count).ToArray();
-        if (candidates.Length < count) throw new InvalidOperationException("Role pool is too small.");
-        var alreadyUsed = result.Select(x => x.Role.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        if (candidates.Any(r => alreadyUsed.Contains(r.Id)))
-            throw new InvalidOperationException("A role cannot be assigned more than once in a match.");
-        var remaining = players.Where(p => result.All(x => x.Player.PlayerId != p.PlayerId)).ToList();
-        for (var i = 0; i < count; i++) result.Add((remaining[i], candidates[i]));
+        if (count == 0) return;
+        if (pool.Count < count)
+            throw new InvalidOperationException($"Not enough enabled roles in the {pool.FirstOrDefault()?.Team.ToString() ?? "requested"} pool.");
+
+        var availablePlayers = players.Where(p => result.All(x => x.Player.PlayerId != p.PlayerId)).ToList();
+        if (availablePlayers.Count < count) throw new InvalidOperationException("Not enough unassigned players.");
+
+        var remaining = pool.ToList();
+        for (var i = 0; i < count; i++)
+        {
+            var totalWeight = remaining.Sum(r => Math.Max(1, r.SpawnChance));
+            var roll = random.Next(totalWeight);
+            var selectedIndex = 0;
+            for (; selectedIndex < remaining.Count - 1; selectedIndex++)
+            {
+                roll -= Math.Max(1, remaining[selectedIndex].SpawnChance);
+                if (roll < 0) break;
+            }
+
+            var role = remaining[selectedIndex];
+            remaining.RemoveAt(selectedIndex);
+            result.Add((availablePlayers[i], role));
+        }
     }
 
     public RoleActionResult TryUseAbility(byte playerId, DateTimeOffset now)
@@ -124,38 +130,46 @@ public sealed class RoleMatchRuntime
             if (!IsRunning) return Reject("match_not_running", "The match is not running.");
             if (!assignments.TryGetValue(playerId, out var role))
                 return Reject("no_role", "This player has no Polus role.");
-            if (cooldownEnds.TryGetValue(playerId, out var until) && now < until)
-                return Reject("cooldown", $"Ability is ready at {until:O}.");
             if (lastActionAt.TryGetValue(playerId, out var previous) && now < previous)
                 return Reject("invalid_time", "Action timestamps must be monotonic.");
+            if (cooldownEnds.TryGetValue(playerId, out var until) && now < until)
+                return Reject("cooldown", $"Ability is ready at {until:O}.");
 
             cooldownEnds[playerId] = now.AddSeconds(Math.Clamp(role.CooldownSeconds, 0, 600));
             lastActionAt[playerId] = now;
-            return new RoleActionResult(true, "accepted", "Ability request accepted by the role runtime.");
+            return new RoleActionResult(true, "accepted", "Ability request accepted; the game adapter must now execute the role-specific effect.");
         }
     }
 
-    /// <summary>Progress is credited only after the host adapter validates the corresponding in-game event.</summary>
+    /// <summary>Credits a named objective only after the host adapter validates its game event.</summary>
     public ObjectiveProgress RecordObjective(byte playerId, string objectiveId, int amount, int required)
     {
         EnsureHost();
-        if (string.IsNullOrWhiteSpace(objectiveId)) throw new ArgumentException("Objective ID is required.");
+        ArgumentException.ThrowIfNullOrWhiteSpace(objectiveId);
         if (amount <= 0 || required <= 0) throw new ArgumentOutOfRangeException(nameof(amount));
+
         lock (gate)
         {
             if (!IsRunning) throw new InvalidOperationException("No active match.");
             if (!assignments.TryGetValue(playerId, out var role))
                 throw new InvalidOperationException("Player has no assigned role.");
-            if (!completedObjectives.TryGetValue(playerId, out var completed))
-                throw new InvalidOperationException("Player objective state is missing.");
-            if (completed.Contains(objectiveId))
-                return new ObjectiveProgress(playerId, role.Id, objectiveProgress[playerId], required, true);
 
-            objectiveProgress[playerId] = Math.Min(required, checked(objectiveProgress[playerId] + amount));
-            var done = objectiveProgress[playerId] >= required;
-            if (done) completed.Add(objectiveId);
-            return new ObjectiveProgress(playerId, role.Id, objectiveProgress[playerId], required, done);
+            var key = (playerId, objectiveId);
+            var current = objectiveProgress.GetValueOrDefault(key);
+            if (completedObjectives.Contains(key))
+                return new ObjectiveProgress(playerId, role.Id, objectiveId, current, required, true);
+
+            current = Math.Min(required, checked(current + amount));
+            objectiveProgress[key] = current;
+            var done = current >= required;
+            if (done) completedObjectives.Add(key);
+            return new ObjectiveProgress(playerId, role.Id, objectiveId, current, required, done);
         }
+    }
+
+    public bool IsObjectiveComplete(byte playerId, string objectiveId)
+    {
+        lock (gate) return completedObjectives.Contains((playerId, objectiveId));
     }
 
     public void EndMatch()
