@@ -13,10 +13,10 @@ Polus targets the latest observed Steam public-branch build of Among Us: **Build
 - Setup step with confirmation-based game closing and backup workspace.
 - Patch step for a user-selected BepInEx IL2CPP x64 ZIP, with ZIP path-safety checks.
 - Restore support for files touched by the patcher.
-- Catalog of 35 original role concepts (12 Crewmate, 11 Impostor, 12 Neutral), host-settings validation, and a game-independent host-authoritative match-state foundation.
+- Catalog loader and validation for 35 original role concepts (12 Crewmate, 11 Impostor, 12 Neutral), weighted role assignment, host-only state mutation, cooldown enforcement, and separate per-objective progress tracking.
 - GitHub Actions workflow to compile and package the Windows patcher.
 
-Important: this is not yet a completed in-game role mod. The catalog entries remain design specifications; the match runtime handles generic assignment/cooldown/objective state only. Actual Among Us gameplay hooks, per-role ability handlers, role UI, custom RPC integration, and mobile-client compatibility are not implemented. Unmodified mobile clients cannot execute custom client-side roles merely because the host is on PC.
+Important: this is not yet a completed in-game role mod. The catalog entries remain design specifications. The RoleCore project now loads and validates the catalogue and provides weighted assignment, cooldown enforcement, and independent objective counters, but it does not execute each role's unique mechanic. Actual Among Us gameplay hooks, per-role ability implementations, role UI, custom RPC integration, and mobile-client compatibility are not implemented. Unmodified mobile clients cannot execute custom client-side roles merely because the host is on PC.
 
 The patcher does not bypass anti-cheat, disable game protections, or modify matchmaking security. Use mods only in lobbies where all participants agree.
 
