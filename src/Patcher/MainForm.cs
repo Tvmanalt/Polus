@@ -79,7 +79,6 @@ public sealed class MainForm : Form
     {
         var client = new HttpClient { Timeout = TimeSpan.FromMinutes(4) };
         client.DefaultRequestHeaders.UserAgent.ParseAdd("Polus-Patcher/1.0");
-        client.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
         return client;
     }
 
