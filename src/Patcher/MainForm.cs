@@ -1,28 +1,42 @@
 using Microsoft.Win32;
 using System.Diagnostics;
 using System.IO.Compression;
+using System.Net.Http;
+using System.Security.Cryptography;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 
 namespace Polus.Patcher;
 
 public sealed class MainForm : Form
 {
-    private readonly TextBox pathBox = new() { ReadOnly = true, Width = 450 };
+    private const string RepoOwner = "Tvmanalt";
+    private const string RepoName = "Polus";
+    private const string BepInExBuildsPage = "https://builds.bepinex.dev/projects/bepinex_be";
+    private static readonly HttpClient Http = CreateHttpClient();
+
+    private readonly TextBox pathBox = new() { ReadOnly = true, Width = 430 };
     private readonly TextBox logBox = new() { Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Vertical, Dock = DockStyle.Fill };
+    private readonly Button patchButton = new() { Text = "Patch", Width = 112, Height = 38 };
+    private readonly Button updateButton = new() { Text = "Update Polus", Width = 112, Height = 38, Enabled = false };
+    private readonly Label updateStatus = new() { Text = "Updates not checked", AutoSize = true, Padding = new Padding(4, 10, 0, 0) };
     private string? gamePath;
     private string? backupPath;
+    private string? latestReleaseAssetUrl;
+    private string? latestReleaseTag;
+    private string? latestReleaseDigest;
 
     public MainForm()
     {
         Text = "Polus";
-        Width = 760;
-        Height = 500;
-        MinimumSize = new Size(680, 430);
+        Width = 790;
+        Height = 540;
+        MinimumSize = new Size(710, 470);
         StartPosition = FormStartPosition.CenterScreen;
 
-        var heading = new Label { Text = "POLUS  /  AMONG US MOD SETUP", AutoSize = true, Font = new Font("Segoe UI", 16, FontStyle.Bold) };
+        var heading = new Label { Text = "POLUS  /  AMONG US ROLE MOD", AutoSize = true, Font = new Font("Segoe UI", 17, FontStyle.Bold) };
         var pathRow = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, WrapContents = false };
-        pathRow.Controls.Add(new Label { Text = "Game folder:", AutoSize = true, Padding = new Padding(0, 8, 0, 0) });
+        pathRow.Controls.Add(new Label { Text = "Steam game folder:", AutoSize = true, Padding = new Padding(0, 8, 0, 0) });
         pathRow.Controls.Add(pathBox);
         var detect = new Button { Text = "Detect Steam", AutoSize = true };
         detect.Click += (_, _) => DetectSteam();
@@ -32,17 +46,19 @@ public sealed class MainForm : Form
         pathRow.Controls.Add(browse);
 
         var actions = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true };
-        var setup = new Button { Text = "Setup", Width = 120, Height = 36 };
-        setup.Click += (_, _) => Setup();
-        var patch = new Button { Text = "Patch", Width = 120, Height = 36 };
-        patch.Click += (_, _) => Patch();
-        var restore = new Button { Text = "Restore", Width = 120, Height = 36 };
+        var setup = new Button { Text = "Setup", Width = 112, Height = 38 };
+        setup.Click += async (_, _) => await SetupAsync();
+        patchButton.Click += async (_, _) => await PatchAsync();
+        var restore = new Button { Text = "Restore", Width = 112, Height = 38 };
         restore.Click += (_, _) => Restore();
-        actions.Controls.AddRange(new Control[] { setup, patch, restore });
+        var checkUpdates = new Button { Text = "Check for updates", Width = 145, Height = 38 };
+        checkUpdates.Click += async (_, _) => await CheckUpdatesAsync();
+        updateButton.Click += async (_, _) => await UpdatePolusAsync();
+        actions.Controls.AddRange(new Control[] { setup, patchButton, restore, checkUpdates, updateButton, updateStatus });
 
         var note = new Label {
-            Text = "Patch installs a BepInEx package ZIP that you select. Use a compatible BepInEx 6 IL2CPP Windows x64 package for your exact game version.",
-            AutoSize = true, MaximumSize = new Size(700, 0), ForeColor = Color.DimGray
+            Text = "Setup detects the Steam installation and installs the official BepInEx IL2CPP x64 loader. Patch installs the Polus plugin files. Close Among Us before setup, patching, restoring, or updating.",
+            AutoSize = true, MaximumSize = new Size(735, 0), ForeColor = Color.DimGray
         };
         var layout = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(14), ColumnCount = 1, RowCount = 5 };
         layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
@@ -56,7 +72,15 @@ public sealed class MainForm : Form
         layout.Controls.Add(note, 0, 3);
         layout.Controls.Add(logBox, 0, 4);
         Controls.Add(layout);
-        Log("Ready. Detect your Steam installation or browse to the folder containing Among Us.exe.");
+        Log("Ready. Press Setup to detect Steam and install BepInEx automatically.");
+    }
+
+    private static HttpClient CreateHttpClient()
+    {
+        var client = new HttpClient { Timeout = TimeSpan.FromMinutes(4) };
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("Polus-Patcher/1.0");
+        client.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
+        return client;
     }
 
     private void DetectSteam()
@@ -64,7 +88,7 @@ public sealed class MainForm : Form
         var found = FindSteamInstall();
         if (found is null) { Log("Steam install not found automatically. Use Browse."); return; }
         SetGamePath(found);
-        Log("Detected: " + found);
+        Log("Detected Steam installation: " + found);
     }
 
     private static string? FindSteamInstall()
@@ -89,7 +113,7 @@ public sealed class MainForm : Form
             var vdf = Path.Combine(root, "steamapps", "libraryfolders.vdf");
             if (File.Exists(vdf))
             {
-                foreach (Match match in Regex.Matches(File.ReadAllText(vdf), "\"path\"\\s*\"([^\"]+)\""))
+                foreach (Match match in Regex.Matches(File.ReadAllText(vdf), "\"path\"\s*\"([^\"]+)\""))
                     libraries.Add(match.Groups[1].Value.Replace("\\\\", "\\"));
             }
             foreach (var library in libraries.Distinct(StringComparer.OrdinalIgnoreCase))
@@ -118,80 +142,156 @@ public sealed class MainForm : Form
         pathBox.Text = gamePath;
     }
 
+    private static bool Is64BitPe(string path)
+    {
+        using var stream = File.OpenRead(path);
+        using var reader = new BinaryReader(stream);
+        if (reader.ReadUInt16() != 0x5A4D) return false;
+        stream.Position = 0x3C;
+        var peOffset = reader.ReadInt32();
+        if (peOffset < 0 || peOffset > stream.Length - 6) return false;
+        stream.Position = peOffset;
+        return reader.ReadUInt32() == 0x00004550 && reader.ReadUInt16() == 0x8664;
+    }
+
     private bool CloseGameIfRunning()
     {
         var processes = Process.GetProcessesByName("Among Us");
         if (processes.Length == 0) return true;
-        if (MessageBox.Show("Among Us is running. Ask it to close before continuing?", "Polus",
+        if (MessageBox.Show("Among Us is running. Close it normally before continuing?", "Polus",
             MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return false;
         foreach (var process in processes)
         {
             try
             {
                 process.CloseMainWindow();
-                if (!process.WaitForExit(7000))
+                if (!process.WaitForExit(8000))
                 {
-                    Log("The game did not close normally. Close it manually and retry.");
+                    Log("Among Us did not close. Close it manually and retry.");
                     return false;
                 }
             }
-            catch (Exception ex) { Log("Could not close game: " + ex.Message); return false; }
+            catch (Exception ex) { Log("Could not close Among Us: " + ex.Message); return false; }
         }
         return true;
     }
 
-    private void Setup()
+    private string EnsureBackupFolder()
     {
-        if (gamePath is null) { DetectSteam(); if (gamePath is null) return; }
-        if (!CloseGameIfRunning()) return;
+        if (backupPath is not null && Directory.Exists(backupPath)) return backupPath;
         backupPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "Polus", "Backups", DateTime.Now.ToString("yyyyMMdd-HHmmss"));
         Directory.CreateDirectory(backupPath);
-        File.WriteAllText(Path.Combine(backupPath, "game-root.txt"), gamePath);
-        Log("Setup complete. Backup workspace: " + backupPath);
+        File.WriteAllText(Path.Combine(backupPath, "game-root.txt"), gamePath!);
+        Log("Backup created: " + backupPath);
+        return backupPath;
     }
 
-    private void Patch()
+    private async Task SetupAsync()
     {
-        if (gamePath is null) { MessageBox.Show("Detect or browse to the Among Us folder first."); return; }
+        if (gamePath is null)
+        {
+            DetectSteam();
+            if (gamePath is null) { Browse(); if (gamePath is null) return; }
+        }
         if (!CloseGameIfRunning()) return;
-        using var dialog = new OpenFileDialog { Filter = "BepInEx package (*.zip)|*.zip", Title = "Select compatible BepInEx IL2CPP x64 ZIP" };
-        if (dialog.ShowDialog() != DialogResult.OK) return;
-        if (backupPath is null) Setup();
-        if (backupPath is null) return;
+        var exe = Path.Combine(gamePath, "Among Us.exe");
+        if (!Is64BitPe(exe))
+        {
+            MessageBox.Show("This Polus build targets the 64-bit Steam version of Among Us. The selected executable is not x64.",
+                "Unsupported game architecture", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
 
-        var changed = new List<string>();
+        EnsureBackupFolder();
         try
         {
-            using var archive = ZipFile.OpenRead(dialog.FileName);
-            var safeRoot = Path.GetFullPath(gamePath) + Path.DirectorySeparatorChar;
-            foreach (var entry in archive.Entries)
+            Log("Finding the latest official BepInEx 6 IL2CPP x64 build...");
+            var page = await Http.GetStringAsync(BepInExBuildsPage);
+            var match = Regex.Match(page, "href=[\"']([^\"']*BepInEx-Unity\\.IL2CPP-win-x64-[^\"']+\\.zip)[\"']", RegexOptions.IgnoreCase);
+            if (!match.Success) throw new InvalidDataException("Could not find the official Windows x64 IL2CPP ZIP on the BepInEx builds page.");
+            var downloadUri = new Uri(new Uri(BepInExBuildsPage), System.Net.WebUtility.HtmlDecode(match.Groups[1].Value));
+            if (downloadUri.Host != "builds.bepinex.dev" || !downloadUri.AbsolutePath.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException("The BepInEx download URL failed validation.");
+
+            var tempZip = Path.Combine(Path.GetTempPath(), "Polus-BepInEx-" + Guid.NewGuid().ToString("N") + ".zip");
+            var bytes = await Http.GetByteArrayAsync(downloadUri);
+            if (bytes.Length < 1_000_000) throw new InvalidDataException("The downloaded BepInEx archive is unexpectedly small.");
+            await File.WriteAllBytesAsync(tempZip, bytes);
+            var installed = ExtractZipSafely(tempZip, gamePath, EnsureBackupFolder());
+            File.Delete(tempZip);
+            Log($"BepInEx installed from the official x64 IL2CPP build. Files processed: {installed}");
+            Log("Setup finished. Press Patch to install the Polus plugin.");
+            patchButton.Enabled = true;
+        }
+        catch (Exception ex)
+        {
+            Log("Setup failed: " + ex.Message);
+            MessageBox.Show(ex.Message, "BepInEx setup failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    private int ExtractZipSafely(string zipPath, string destinationRoot, string backupRoot)
+    {
+        var safeRoot = Path.GetFullPath(destinationRoot) + Path.DirectorySeparatorChar;
+        var changed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var count = 0;
+        using var archive = ZipFile.OpenRead(zipPath);
+        foreach (var entry in archive.Entries)
+        {
+            if (string.IsNullOrEmpty(entry.Name)) continue;
+            var target = Path.GetFullPath(Path.Combine(destinationRoot, entry.FullName));
+            if (!target.StartsWith(safeRoot, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException("The archive contains a path outside the game folder.");
+            Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+            if (File.Exists(target))
             {
-                if (string.IsNullOrEmpty(entry.Name)) continue;
-                var target = Path.GetFullPath(Path.Combine(gamePath, entry.FullName));
-                if (!target.StartsWith(safeRoot, StringComparison.OrdinalIgnoreCase))
-                    throw new InvalidDataException("The ZIP contains an unsafe path outside the game folder.");
-                Directory.CreateDirectory(Path.GetDirectoryName(target)!);
-                if (File.Exists(target))
-                {
-                    var saved = Path.Combine(backupPath, "original", Path.GetRelativePath(gamePath, target));
-                    Directory.CreateDirectory(Path.GetDirectoryName(saved)!);
-                    File.Copy(target, saved, true);
-                }
-                using var input = entry.Open();
-                using var output = File.Create(target);
-                input.CopyTo(output);
-                changed.Add(Path.GetRelativePath(gamePath, target));
+                var relative = Path.GetRelativePath(destinationRoot, target);
+                var saved = Path.Combine(backupRoot, "original", relative);
+                Directory.CreateDirectory(Path.GetDirectoryName(saved)!);
+                if (!File.Exists(saved)) File.Copy(target, saved);
             }
-            File.WriteAllLines(Path.Combine(backupPath, "changed-files.txt"), changed);
-            Log($"Patch package extracted. Files installed: {changed.Count}");
-            Log("This installs the selected loader package only. The custom gameplay plugin is not implemented yet.");
+            using var input = entry.Open();
+            using var output = File.Create(target);
+            input.CopyTo(output);
+            changed.Add(Path.GetRelativePath(destinationRoot, target));
+            count++;
+        }
+        File.WriteAllLines(Path.Combine(backupRoot, "changed-files.txt"), changed);
+        return count;
+    }
+
+    private async Task PatchAsync()
+    {
+        if (gamePath is null) { MessageBox.Show("Press Setup first so Polus can detect and prepare the game folder."); return; }
+        if (!CloseGameIfRunning()) return;
+        try
+        {
+            var pluginDirectory = Path.Combine(gamePath, "BepInEx", "plugins", "Polus");
+            Directory.CreateDirectory(pluginDirectory);
+            var installed = 0;
+            installed += ExtractEmbeddedResource("Polus.Plugin.dll", Path.Combine(pluginDirectory, "Polus.Plugin.dll"));
+            installed += ExtractEmbeddedResource("Polus.RoleCore.dll", Path.Combine(pluginDirectory, "Polus.RoleCore.dll"));
+            installed += ExtractEmbeddedResource("roles.json", Path.Combine(pluginDirectory, "roles.json"));
+            if (installed != 3) throw new InvalidOperationException("The Polus plugin payload is incomplete in this patcher build.");
+            File.WriteAllText(Path.Combine(pluginDirectory, "installed-version.txt"), Application.ProductVersion);
+            Log("Polus plugin payload installed to BepInEx/plugins/Polus.");
+            Log("Launch Among Us once to let BepInEx initialize. Check BepInEx/LogOutput.log if the plugin reports an error.");
         }
         catch (Exception ex)
         {
             Log("Patch failed: " + ex.Message);
-            MessageBox.Show(ex.Message, "Patch failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show(ex.Message, "Polus patch failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
+    }
+
+    private static int ExtractEmbeddedResource(string resourceName, string targetPath)
+    {
+        using var input = typeof(MainForm).Assembly.GetManifestResourceStream(resourceName);
+        if (input is null) return 0;
+        using var output = File.Create(targetPath);
+        input.CopyTo(output);
+        return 1;
     }
 
     private void Restore()
@@ -209,7 +309,6 @@ public sealed class MainForm : Form
             return;
         }
         if (!CloseGameIfRunning()) return;
-
         var safeRoot = Path.GetFullPath(gamePath) + Path.DirectorySeparatorChar;
         foreach (var relative in File.ReadAllLines(list))
         {
@@ -223,7 +322,89 @@ public sealed class MainForm : Form
             }
             else if (File.Exists(target)) File.Delete(target);
         }
-        Log("Restore completed for files recorded in the selected backup.");
+        var polusPlugin = Path.Combine(gamePath, "BepInEx", "plugins", "Polus");
+        if (Directory.Exists(polusPlugin)) Directory.Delete(polusPlugin, true);
+        Log("Restore completed for backed-up loader files and removed the Polus plugin folder.");
+    }
+
+    private async Task CheckUpdatesAsync()
+    {
+        updateButton.Enabled = false;
+        updateStatus.Text = "Checking...";
+        try
+        {
+            var url = $"https://api.github.com/repos/{RepoOwner}/{RepoName}/releases/latest";
+            using var response = await Http.GetAsync(url);
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                throw new InvalidOperationException("No GitHub release exists yet. Publish a vX.Y.Z release to enable the updater.");
+            response.EnsureSuccessStatusCode();
+            using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+            var root = json.RootElement;
+            latestReleaseTag = root.GetProperty("tag_name").GetString();
+            var assets = root.GetProperty("assets").EnumerateArray();
+            var asset = assets.FirstOrDefault(a => string.Equals(a.GetProperty("name").GetString(), "Polus.exe", StringComparison.OrdinalIgnoreCase));
+            if (asset.ValueKind == JsonValueKind.Undefined)
+                throw new InvalidDataException("The latest GitHub release does not contain the required Polus.exe asset.");
+            latestReleaseAssetUrl = asset.GetProperty("browser_download_url").GetString();
+            latestReleaseDigest = asset.TryGetProperty("digest", out var digest) ? digest.GetString() : null;
+            var current = typeof(MainForm).Assembly.GetName().Version ?? new Version(0, 0);
+            var latestText = (latestReleaseTag ?? "").TrimStart('v', 'V');
+            var isNewer = Version.TryParse(latestText, out var latest) && latest > current;
+            updateStatus.Text = isNewer ? $"Update available: {latestReleaseTag}" : $"Latest: {latestReleaseTag}";
+            updateButton.Enabled = isNewer;
+            Log(isNewer ? $"Polus update available: {latestReleaseTag}" : $"Polus is current ({latestReleaseTag}).");
+        }
+        catch (Exception ex)
+        {
+            updateStatus.Text = "Update check failed";
+            Log("Update check failed: " + ex.Message);
+            MessageBox.Show(ex.Message, "Polus updates", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+    }
+
+    private async Task UpdatePolusAsync()
+    {
+        if (string.IsNullOrWhiteSpace(latestReleaseAssetUrl)) return;
+        if (!Uri.TryCreate(latestReleaseAssetUrl, UriKind.Absolute, out var uri) || uri.Host != "github.com")
+        {
+            MessageBox.Show("The release asset URL did not pass validation.");
+            return;
+        }
+        try
+        {
+            updateButton.Enabled = false;
+            Log("Downloading Polus.exe from the latest GitHub release...");
+            var bytes = await Http.GetByteArrayAsync(uri);
+            if (bytes.Length < 100_000 || bytes[0] != (byte)'M' || bytes[1] != (byte)'Z')
+                throw new InvalidDataException("The release asset is not a valid Windows executable.");
+            if (!string.IsNullOrWhiteSpace(latestReleaseDigest) && latestReleaseDigest.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase))
+            {
+                var actual = Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
+                if (!string.Equals(actual, latestReleaseDigest[7..], StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidDataException("The release asset SHA-256 digest does not match GitHub's digest.");
+            }
+
+            var currentExe = Application.ExecutablePath;
+            var updateDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Polus", "Updates");
+            Directory.CreateDirectory(updateDir);
+            var newExe = Path.Combine(updateDir, "Polus.new.exe");
+            var script = Path.Combine(updateDir, "apply-update.cmd");
+            await File.WriteAllBytesAsync(newExe, bytes);
+            var pid = Environment.ProcessId;
+            var escapedNew = newExe.Replace("%", "%%");
+            var escapedCurrent = currentExe.Replace("%", "%%");
+            var scriptText = $"@echo off\r\n:wait\r\ntasklist /FI \"PID eq {pid}\" | find \"{pid}\" >nul\r\nif not errorlevel 1 (timeout /t 1 /nobreak >nul & goto wait)\r\ncopy /y \"{escapedNew}\" \"{escapedCurrent}\" >nul\r\nif errorlevel 1 exit /b 1\r\nstart \"\" \"{escapedCurrent}\"\r\ndel \"{escapedNew}\"\r\ndel \"%~f0\"\r\n";
+            await File.WriteAllTextAsync(script, scriptText);
+            Process.Start(new ProcessStartInfo("cmd.exe", $"/c \"{script}\"") { CreateNoWindow = true, UseShellExecute = false });
+            Log($"Installing {latestReleaseTag}. Polus will restart after this window closes.");
+            Close();
+        }
+        catch (Exception ex)
+        {
+            updateButton.Enabled = true;
+            Log("Update failed: " + ex.Message);
+            MessageBox.Show(ex.Message, "Polus update failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
     }
 
     private void Log(string message) =>
