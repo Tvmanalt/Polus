@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build-windows:
@@ -46,10 +46,15 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 8.0.x
+          dotnet-version: |
+            6.0.x
+            8.0.x
 
-      - name: Build role core
-        run: dotnet build .\\src\\RoleCore\\RoleCore.csproj -c Release
+      - name: Restore plugin dependencies
+        run: dotnet restore .\\src\\Plugin\\Polus.Plugin.csproj --configfile nuget.config
+
+      - name: Build plugin and role core
+        run: dotnet build .\\src\\Plugin\\Polus.Plugin.csproj -c Release --no-restore
 
       - name: Publish self-contained Windows x64 app
         run: dotnet publish .\src\Patcher\Patcher.csproj -c Release -r win-x64 --self-contained true
@@ -66,3 +71,11 @@ jobs:
         with:
           name: Polus-Windows-x64
           path: Polus-Windows-x64.zip
+
+      - name: Publish GitHub release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Polus ${{ github.ref_name }}
+          generate_release_notes: true
+          files: src/Patcher/bin/Release/net8.0-windows/win-x64/publish/Polus.exe
