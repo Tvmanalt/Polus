@@ -113,7 +113,7 @@ public sealed class MainForm : Form
             var vdf = Path.Combine(root, "steamapps", "libraryfolders.vdf");
             if (File.Exists(vdf))
             {
-                foreach (Match match in Regex.Matches(File.ReadAllText(vdf), "\"path\"\s*\"([^\"]+)\""))
+                foreach (Match match in Regex.Matches(File.ReadAllText(vdf), @"""path""\s*""([^""]+)"""))
                     libraries.Add(match.Groups[1].Value.Replace("\\\\", "\\"));
             }
             foreach (var library in libraries.Distinct(StringComparer.OrdinalIgnoreCase))
