@@ -57,7 +57,7 @@ public static class RoleCatalogLoader
 
     public static IReadOnlyList<RoleDefinition> Load(string json)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(json);
+        if (string.IsNullOrWhiteSpace(json)) throw new ArgumentException("JSON cannot be empty.", nameof(json));
         var roles = JsonSerializer.Deserialize<List<RoleDefinition>>(json, Options)
             ?? throw new InvalidDataException("The role catalogue is empty.");
 
