@@ -11,5 +11,5 @@
   </PropertyGroup>
   <ItemGroup>
     <Content Include="polus.ico" CopyToOutputDirectory="PreserveNewest" />
-  </PropertyGroup>
+  </ItemGroup>
 </Project>
