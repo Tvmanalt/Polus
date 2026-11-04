@@ -54,7 +54,7 @@ public abstract class PolusNeutralRole : CrewmateRole, ICustomRole
         TasksCountForProgress = false
     };
     public bool CanLocalPlayerSeeRole(PlayerControl player) => true;
-    public override bool DidWin(GameOverReason gameOverReason) => Player && PolusRoleEvents.GetCompletedTaskCount(Player.PlayerId) >= ObjectiveTaskGoal;
+    public override bool DidWin(GameOverReason gameOverReason) => gameOverReason == MiraAPI.GameEnd.CustomGameOver.GameOverReason<PolusNeutralVictory>();
 }
 
 public sealed class CartographerRole : PolusCrewmateRole
