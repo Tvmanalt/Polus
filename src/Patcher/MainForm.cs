@@ -271,10 +271,12 @@ public sealed class MainForm : Form
             var installed = 0;
             installed += ExtractEmbeddedResource("Polus.Plugin.dll", Path.Combine(pluginDirectory, "Polus.Plugin.dll"));
             installed += ExtractEmbeddedResource("Polus.RoleCore.dll", Path.Combine(pluginDirectory, "Polus.RoleCore.dll"));
+            installed += ExtractEmbeddedResource("MiraAPI.dll", Path.Combine(pluginDirectory, "MiraAPI.dll"));
+            installed += ExtractEmbeddedResource("Reactor.dll", Path.Combine(pluginDirectory, "Reactor.dll"));
             installed += ExtractEmbeddedResource("roles.json", Path.Combine(pluginDirectory, "roles.json"));
-            if (installed != 3) throw new InvalidOperationException("The Polus plugin payload is incomplete in this patcher build.");
+            if (installed != 5) throw new InvalidOperationException("The Polus plugin payload or its MiraAPI/Reactor dependencies are incomplete in this patcher build.");
             File.WriteAllText(Path.Combine(pluginDirectory, "installed-version.txt"), Application.ProductVersion);
-            Log("Polus plugin payload installed to BepInEx/plugins/Polus.");
+            Log("Polus, MiraAPI, and Reactor plugin assemblies installed to BepInEx/plugins/Polus.");
             Log("Launch Among Us once to let BepInEx initialize. Check BepInEx/LogOutput.log if the plugin reports an error.");
         }
         catch (Exception ex)
