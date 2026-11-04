@@ -1,27 +1,37 @@
 using BepInEx;
+using BepInEx.Configuration;
 using BepInEx.Unity.IL2CPP;
-using Polus.RoleCore;
+using HarmonyLib;
+using MiraAPI.PluginLoading;
+using MiraAPI.Translation;
+using Reactor;
+using Reactor.Networking;
+using Reactor.Networking.Attributes;
 
 namespace Polus.Plugin;
 
-[BepInPlugin("org.polus.customroles", "Polus Custom Roles", "1.0.0")]
-public sealed class PolusPlugin : BasePlugin
+[BepInPlugin(PluginGuid, "Polus Custom Roles", "1.1.0")]
+[BepInProcess("Among Us.exe")]
+[BepInDependency(ReactorPlugin.Id)]
+[BepInDependency(MiraApiPlugin.Id)]
+[ReactorModFlags(ModFlags.RequireOnAllClients)]
+public sealed class PolusPlugin : BasePlugin, IMiraPlugin
 {
-    private IReadOnlyList<RoleDefinition> catalog = Array.Empty<RoleDefinition>();
+    public const string PluginGuid = "org.polus.customroles";
+    public Harmony Harmony { get; } = new(PluginGuid);
+    public string OptionsTitleText => "Polus Custom Roles";
+    public string CustomOptionMenuNameTwo => "Polus Role Settings";
+
+    public ConfigFile GetConfigFile() => Config;
+
+    public PolusPlugin()
+    {
+        MiraLocaleManager.Register(PluginGuid);
+    }
 
     public override void Load()
     {
-        var catalogPath = Path.Combine(Paths.BepInExRootPath, "plugins", "Polus", "roles.json");
-        try
-        {
-            catalog = RoleCatalogLoader.LoadFile(catalogPath);
-            Log.LogInfo($"Polus plugin loaded. Validated {catalog.Count} role definitions.");
-        }
-        catch (Exception ex)
-        {
-            Log.LogError($"Could not load the Polus role catalogue: {ex}");
-        }
-
-        Log.LogWarning("Polus gameplay hooks are not enabled in this build yet. The loader and catalogue are installed, but no in-match role abilities are being advertised as playable.");
+        Harmony.PatchAll();
+        Log.LogInfo("Polus 1.1.0 loaded. MiraAPI will register custom role and ability classes in this assembly.");
     }
 }
