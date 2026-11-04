@@ -2,6 +2,10 @@
 
 Polus is a Windows patcher and source scaffold for a host-configured Among Us custom-role mod targeting the Steam installation.
 
+## Target game build
+
+Polus targets the latest observed Steam public-branch build of Among Us: **Build ID 25134893** (SteamDB reports it was updated on 29 September 2026). This is a Steam build identifier, not an assumed in-game semantic version. The mobile v19.0.1 announcement is not used as the Steam compatibility target. Re-check the public branch build before each release. [SteamDB build history](https://steamdb.info/app/945360/depots/) · [Official Among Us updates](https://www.innersloth.com/games/among-us/).
+
 ## Current scope
 
 - Windows x64 WinForms patcher.
@@ -9,10 +13,10 @@ Polus is a Windows patcher and source scaffold for a host-configured Among Us cu
 - Setup step with confirmation-based game closing and backup workspace.
 - Patch step for a user-selected BepInEx IL2CPP x64 ZIP, with ZIP path-safety checks.
 - Restore support for files touched by the patcher.
-- Catalog of 35 original role concepts (12 Crewmate, 11 Impostor, 12 Neutral) and a host-settings validation library.
+- Catalog of 35 original role concepts (12 Crewmate, 11 Impostor, 12 Neutral), host-settings validation, and a game-independent host-authoritative match-state foundation.
 - GitHub Actions workflow to compile and package the Windows patcher.
 
-Important: this is a patcher foundation, not a completed 34-role gameplay mod. The catalog entries are role specifications only. Actual Among Us gameplay hooks, role UI, custom RPC integration, and mobile-client compatibility are not implemented. Unmodified mobile clients cannot execute custom client-side roles merely because the host is on PC.
+Important: this is not yet a completed in-game role mod. The catalog entries remain design specifications; the match runtime handles generic assignment/cooldown/objective state only. Actual Among Us gameplay hooks, per-role ability handlers, role UI, custom RPC integration, and mobile-client compatibility are not implemented. Unmodified mobile clients cannot execute custom client-side roles merely because the host is on PC.
 
 The patcher does not bypass anti-cheat, disable game protections, or modify matchmaking security. Use mods only in lobbies where all participants agree.
 
@@ -40,7 +44,7 @@ Game updates can break mod compatibility. Verify compatibility for the exact ins
 
 - .github/workflows/build.yml — Windows build pipeline.
 - src/Patcher/ — Windows patcher.
-- src/RoleCore/ — game-independent role/configuration model.
-- roles/roles.json — 34 role specifications.
+- src/RoleCore/ — game-independent role/configuration model and match runtime.
+- roles/roles.json — 35 role specifications.
 
 Project source is MIT licensed. Third-party game and mod-loader components are not included; their licenses remain with their respective authors.
