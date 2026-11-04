@@ -10,7 +10,7 @@ public abstract class PolusCrewmateRole : CrewmateRole, ICustomRole
     public abstract string RoleName { get; }
     public abstract string RoleDescription { get; }
     public string RoleMedDescription => RoleDescription;
-    public string RoleLongDescription => RoleDescription;
+    public string RoleLongDescription => RoleDescription + $"\nTasks recorded: {(Player ? PolusRoleEvents.GetCompletedTaskCount(Player.PlayerId) : 0)}";
     public Color RoleColor => new Color32(105, 190, 255, 255);
     public ModdedRoleTeams Team => ModdedRoleTeams.Crewmate;
     public CustomRoleConfiguration Configuration => new(this) { DefaultRoleCount = 1, DefaultChance = 35, MaxRoleCount = 1 };
@@ -39,7 +39,7 @@ public abstract class PolusNeutralRole : CrewmateRole, ICustomRole
     public abstract string RoleDescription { get; }
     public abstract int ObjectiveTaskGoal { get; }
     public string RoleMedDescription => RoleDescription;
-    public string RoleLongDescription => RoleDescription + $"\\nObjective progress: {(Player ? PolusRoleEvents.GetCompletedTaskCount(Player.PlayerId) : 0)}/{ObjectiveTaskGoal}";
+    public string RoleLongDescription => RoleDescription + $"\nObjective progress: {(Player ? PolusRoleEvents.GetCompletedTaskCount(Player.PlayerId) : 0)}/{ObjectiveTaskGoal}";
     public Color RoleColor => new Color32(190, 145, 255, 255);
     public ModdedRoleTeams Team => ModdedRoleTeams.Custom;
     public CustomRoleConfiguration Configuration => new(this)
@@ -301,7 +301,7 @@ public sealed class PuzzlewrightRole : PolusNeutralRole
 public sealed class TimeCapsuleRole : PolusNeutralRole
 {
     public override int ObjectiveTaskGoal => 6;
-    public override string IdPart => "time_capsule";
+    public override string IdPart => "timecapsule";
     public override string RoleName => "Time Capsule";
     public override string RoleDescription => "Has a distinct neutral identity and a personal before-and-after objective.";
 }
