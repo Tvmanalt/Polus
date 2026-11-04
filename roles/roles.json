@@ -1,0 +1,342 @@
+[
+  {
+    "id": "detective",
+    "name": "Detective",
+    "team": "Crewmate",
+    "description": "Can inspect a meeting clue.",
+    "enabledByDefault": false,
+    "spawnChance": 50,
+    "cooldownSeconds": 30,
+    "status": "design-only"
+  },
+  {
+    "id": "sheriff",
+    "name": "Sheriff",
+    "team": "Crewmate",
+    "description": "Has a limited accusation ability.",
+    "enabledByDefault": false,
+    "spawnChance": 50,
+    "cooldownSeconds": 30,
+    "status": "design-only"
+  },
+  {
+    "id": "medic",
+    "name": "Medic",
+    "team": "Crewmate",
+    "description": "Can assign a protective status.",
+    "enabledByDefault": false,
+    "spawnChance": 50,
+    "cooldownSeconds": 30,
+    "status": "design-only"
+  },
+  {
+    "id": "engineer",
+    "name": "Engineer",
+    "team": "Crewmate",
+    "description": "Can use a limited repair ability.",
+    "enabledByDefault": false,
+    "spawnChance": 50,
+    "cooldownSeconds": 30,
+    "status": "design-only"
+  },
+  {
+    "id": "tracker",
+    "name": "Tracker",
+    "team": "Crewmate",
+    "description": "Can view a temporary trail indicator.",
+    "enabledByDefault": false,
+    "spawnChance": 50,
+    "cooldownSeconds": 30,
+    "status": "design-only"
+  },
+  {
+    "id": "spy",
+    "name": "Spy",
+    "team": "Crewmate",
+    "description": "Receives extra information from a configured panel.",
+    "enabledByDefault": false,
+    "spawnChance": 50,
+    "cooldownSeconds": 30,
+    "status": "design-only"
+  },
+  {
+    "id": "mayor",
+    "name": "Mayor",
+    "team": "Crewmate",
+    "description": "Receives configurable voting influence.",
+    "enabledByDefault": false,
+    "spawnChance": 50,
+    "cooldownSeconds": 30,
+    "status": "design-only"
+  },
+  {
+    "id": "timekeeper",
+    "name": "Timekeeper",
+    "team": "Crewmate",
+    "description": "Can trigger a short time rewind effect.",
+    "enabledByDefault": false,
+    "spawnChance": 50,
+    "cooldownSeconds": 30,
+    "status": "design-only"
+  },
+  {
+    "id": "investigator",
+    "name": "Investigator",
+    "team": "Crewmate",
+    "description": "Can inspect evidence after a meeting.",
+    "enabledByDefault": false,
+    "spawnChance": 50,
+    "cooldownSeconds": 30,
+    "status": "design-only"
+  },
+  {
+    "id": "bodyguard",
+    "name": "Bodyguard",
+    "team": "Crewmate",
+    "description": "Can protect a selected player.",
+    "enabledByDefault": false,
+    "spawnChance": 50,
+    "cooldownSeconds": 30,
+    "status": "design-only"
+  },
+  {
+    "id": "altruist",
+    "name": "Altruist",
+    "team": "Crewmate",
+    "description": "Can trade a resource for a team benefit.",
+    "enabledByDefault": false,
+    "spawnChance": 50,
+    "cooldownSeconds": 30,
+    "status": "design-only"
+  },
+  {
+    "id": "seer",
+    "name": "Seer",
+    "team": "Crewmate",
+    "description": "Receives a limited alignment hint.",
+    "enabledByDefault": false,
+    "spawnChance": 50,
+    "cooldownSeconds": 30,
+    "status": "design-only"
+  },
+  {
+    "id": "transporter",
+    "name": "Transporter",
+    "team": "Crewmate",
+    "description": "Can swap two players' positions.",
+    "enabledByDefault": false,
+    "spawnChance": 50,
+    "cooldownSeconds": 30,
+    "status": "design-only"
+  },
+  {
+    "id": "snitch",
+    "name": "Snitch",
+    "team": "Crewmate",
+    "description": "Receives a clue near task completion.",
+    "enabledByDefault": false,
+    "spawnChance": 50,
+    "cooldownSeconds": 30,
+    "status": "design-only"
+  },
+  {
+    "id": "mystic",
+    "name": "Mystic",
+    "team": "Crewmate",
+    "description": "Receives a periodic event hint.",
+    "enabledByDefault": false,
+    "spawnChance": 50,
+    "cooldownSeconds": 30,
+    "status": "design-only"
+  },
+  {
+    "id": "assassin",
+    "name": "Assassin",
+    "team": "Impostor",
+    "description": "Has a limited secret elimination action.",
+    "enabledByDefault": false,
+    "spawnChance": 50,
+    "cooldownSeconds": 30,
+    "status": "design-only"
+  },
+  {
+    "id": "morphling",
+    "name": "Morphling",
+    "team": "Impostor",
+    "description": "Can temporarily copy another player's appearance.",
+    "enabledByDefault": false,
+    "spawnChance": 50,
+    "cooldownSeconds": 30,
+    "status": "design-only"
+  },
+  {
+    "id": "cleaner",
+    "name": "Cleaner",
+    "team": "Impostor",
+    "description": "Can remove a body from the map.",
+    "enabledByDefault": false,
+    "spawnChance": 50,
+    "cooldownSeconds": 30,
+    "status": "design-only"
+  },
+  {
+    "id": "trapper",
+    "name": "Trapper",
+    "team": "Impostor",
+    "description": "Can place a temporary detection trap.",
+    "enabledByDefault": false,
+    "spawnChance": 50,
+    "cooldownSeconds": 30,
+    "status": "design-only"
+  },
+  {
+    "id": "silencer",
+    "name": "Silencer",
+    "team": "Impostor",
+    "description": "Can restrict meeting speech.",
+    "enabledByDefault": false,
+    "spawnChance": 50,
+    "cooldownSeconds": 30,
+    "status": "design-only"
+  },
+  {
+    "id": "poisoner",
+    "name": "Poisoner",
+    "team": "Impostor",
+    "description": "Can apply a delayed elimination effect.",
+    "enabledByDefault": false,
+    "spawnChance": 50,
+    "cooldownSeconds": 30,
+    "status": "design-only"
+  },
+  {
+    "id": "camouflager",
+    "name": "Camouflager",
+    "team": "Impostor",
+    "description": "Can temporarily obscure player appearances.",
+    "enabledByDefault": false,
+    "spawnChance": 50,
+    "cooldownSeconds": 30,
+    "status": "design-only"
+  },
+  {
+    "id": "puppeteer",
+    "name": "Puppeteer",
+    "team": "Impostor",
+    "description": "Can trigger a short movement effect.",
+    "enabledByDefault": false,
+    "spawnChance": 50,
+    "cooldownSeconds": 30,
+    "status": "design-only"
+  },
+  {
+    "id": "miner",
+    "name": "Miner",
+    "team": "Impostor",
+    "description": "Can create a temporary tunnel link.",
+    "enabledByDefault": false,
+    "spawnChance": 50,
+    "cooldownSeconds": 30,
+    "status": "design-only"
+  },
+  {
+    "id": "warlock",
+    "name": "Warlock",
+    "team": "Impostor",
+    "description": "Can apply a delayed curse effect.",
+    "enabledByDefault": false,
+    "spawnChance": 50,
+    "cooldownSeconds": 30,
+    "status": "design-only"
+  },
+  {
+    "id": "jester",
+    "name": "Jester",
+    "team": "Neutral",
+    "description": "Has a vote-out win condition.",
+    "enabledByDefault": false,
+    "spawnChance": 50,
+    "cooldownSeconds": 30,
+    "status": "design-only"
+  },
+  {
+    "id": "arsonist",
+    "name": "Arsonist",
+    "team": "Neutral",
+    "description": "Has a separate marking objective.",
+    "enabledByDefault": false,
+    "spawnChance": 50,
+    "cooldownSeconds": 30,
+    "status": "design-only"
+  },
+  {
+    "id": "executioner",
+    "name": "Executioner",
+    "team": "Neutral",
+    "description": "Has a designated voting target.",
+    "enabledByDefault": false,
+    "spawnChance": 50,
+    "cooldownSeconds": 30,
+    "status": "design-only"
+  },
+  {
+    "id": "phantom",
+    "name": "Phantom",
+    "team": "Neutral",
+    "description": "Has a special objective after elimination.",
+    "enabledByDefault": false,
+    "spawnChance": 50,
+    "cooldownSeconds": 30,
+    "status": "design-only"
+  },
+  {
+    "id": "survivor",
+    "name": "Survivor",
+    "team": "Neutral",
+    "description": "Has a survival win condition.",
+    "enabledByDefault": false,
+    "spawnChance": 50,
+    "cooldownSeconds": 30,
+    "status": "design-only"
+  },
+  {
+    "id": "glitch",
+    "name": "Glitch",
+    "team": "Neutral",
+    "description": "Has a separate configurable win condition.",
+    "enabledByDefault": false,
+    "spawnChance": 50,
+    "cooldownSeconds": 30,
+    "status": "design-only"
+  },
+  {
+    "id": "amnesiac",
+    "name": "Amnesiac",
+    "team": "Neutral",
+    "description": "Can inherit a role after an elimination.",
+    "enabledByDefault": false,
+    "spawnChance": 50,
+    "cooldownSeconds": 30,
+    "status": "design-only"
+  },
+  {
+    "id": "plaguebearer",
+    "name": "Plaguebearer",
+    "team": "Neutral",
+    "description": "Has a spreading status objective.",
+    "enabledByDefault": false,
+    "spawnChance": 50,
+    "cooldownSeconds": 30,
+    "status": "design-only"
+  },
+  {
+    "id": "guardian",
+    "name": "Guardian",
+    "team": "Neutral",
+    "description": "Has a protection and survival objective.",
+    "enabledByDefault": false,
+    "spawnChance": 50,
+    "cooldownSeconds": 30,
+    "status": "design-only"
+  }
+]
