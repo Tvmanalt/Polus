@@ -1,50 +1,57 @@
 # Polus
 
-Polus is a Windows patcher and source scaffold for a host-configured Among Us custom-role mod targeting the Steam installation.
+Polus is a Windows x64 patcher and an in-development custom-role mod for the Steam version of Among Us.
 
-## Target game build
+## Compatibility target
 
-Polus targets the latest observed Steam public-branch build of Among Us: **Build ID 25134893** (SteamDB reports it was updated on 29 September 2026). This is a Steam build identifier, not an assumed in-game semantic version. The mobile v19.0.1 announcement is not used as the Steam compatibility target. Re-check the public branch build before each release. [SteamDB build history](https://steamdb.info/app/945360/depots/) · [Official Among Us updates](https://www.innersloth.com/games/among-us/).
+- Among Us Steam public build: **2026.9.29 / Build ID 25134893** (64-bit).
+- BepInEx: **6.0.0-be.788 IL2CPP Windows x64** build line.
+- Plugin compile references: AmongUs.GameLibs.Steam 2026.9.29 and Reactor 2.5.1-ci.400.
 
-## Current scope
+Game updates can break mods. Polus checks the architecture and installs the official BepInEx x64 IL2CPP build, but a loader version alone does not guarantee game API compatibility.
 
-- Windows x64 WinForms patcher.
-- Steam library discovery and manual game-folder selection.
-- Setup step with confirmation-based game closing and backup workspace.
-- Patch step for a user-selected BepInEx IL2CPP x64 ZIP, with ZIP path-safety checks.
-- Restore support for files touched by the patcher.
-- Catalog loader and validation for 35 original role concepts (12 Crewmate, 11 Impostor, 12 Neutral), weighted role assignment, host-only state mutation, cooldown enforcement, and separate per-objective progress tracking.
-- GitHub Actions workflow to compile and package the Windows patcher.
+## Patcher features
 
-Important: this is not yet a completed in-game role mod. The catalog entries remain design specifications. The RoleCore project now loads and validates the catalogue and provides weighted assignment, cooldown enforcement, and independent objective counters, but it does not execute each role's unique mechanic. Actual Among Us gameplay hooks, per-role ability implementations, role UI, custom RPC integration, and mobile-client compatibility are not implemented. Unmodified mobile clients cannot execute custom client-side roles merely because the host is on PC.
+- **Setup:** detects the Steam library (including secondary Steam libraries), verifies that Among Us.exe is 64-bit, downloads the latest matching BepInEx IL2CPP x64 build from the official BepInEx builds site, backs up overwritten files, and installs it beside Among Us.exe.
+- **Patch:** installs the Polus plugin assembly, shared role runtime assembly, and role catalogue into BepInEx/plugins/Polus.
+- **Restore:** restores files backed up by Setup and removes the Polus plugin folder.
+- **Check for updates:** checks the latest GitHub release for this repository.
+- **Update Polus:** downloads the Polus.exe release asset, checks the PE header and GitHub SHA-256 digest when provided, then replaces and restarts the running patcher.
+- The patcher does not bypass anti-cheat, disable game protections, or modify matchmaking security.
 
-The patcher does not bypass anti-cheat, disable game protections, or modify matchmaking security. Use mods only in lobbies where all participants agree.
+## Current gameplay status — read this
+
+The plugin project and BepInEx entry point now exist and load/validate the 35-role catalogue. **The actual 35 in-match role mechanics are not implemented yet.** There are no completed Among Us gameplay hooks, role-specific ability handlers, custom role HUD, or custom RPC synchronization in this build. The generic RoleCore assignment/cooldown/objective runtime is not by itself playable in Among Us. This repository must not be described as having all 35 playable roles until those systems are implemented and tested in-game.
+
+Unmodified mobile clients cannot run a client-side custom plugin or display a custom role HUD. Full custom role UI and client-side effects require a compatible modded client; host-only mode cannot make vanilla clients execute arbitrary custom code.
 
 ## Build
 
-Open the Actions tab, select Build Polus, and run it. The workflow also runs on pushes to main. Download the Polus-Windows-x64 artifact from the completed run.
+GitHub Actions builds on pushes to main and on tags matching v*. Download the Windows x64 artifact from the workflow run.
 
-Local build on Windows with .NET 8 SDK:
+To publish a release, push a version tag such as v1.0.1. The workflow attaches Polus.exe to that GitHub release so the in-app updater can find it.
 
-    dotnet publish .\\src\\Patcher\\Patcher.csproj -c Release -r win-x64 --self-contained true
+Build on Windows with .NET 6 and .NET 8 SDKs:
 
-Output: src/Patcher/bin/Release/net8.0-windows/win-x64/publish/.
+    dotnet restore .\src\Plugin\Polus.Plugin.csproj --configfile nuget.config
+    dotnet build .\src\Plugin\Polus.Plugin.csproj -c Release --no-restore
+    dotnet publish .\src\Patcher\Patcher.csproj -c Release -r win-x64 --self-contained true
 
 ## Install
 
 1. Run Polus.exe.
-2. Select Detect Steam or browse to the folder containing Among Us.exe.
-3. Press Setup to create a backup workspace.
-4. Press Patch and select a BepInEx 6 IL2CPP Windows x64 ZIP that supports your installed game version.
-5. To undo the patch, use Restore and select the backup folder.
+2. Press **Setup**. It detects Steam automatically; if it cannot find the game, use Browse.
+3. Setup installs the x64 BepInEx loader and creates a backup.
+4. Press **Patch** to install the Polus plugin payload.
+5. Press **Check for updates** to check GitHub releases, then **Update Polus** if a newer release is available.
+6. Use **Restore** and select the backup folder to undo the game-folder changes.
 
-Game updates can break mod compatibility. Verify compatibility for the exact installed game build before patching.
+## Source layout
 
-## Layout
+- `.github/workflows/build.yml` — build and release workflow.
+- `src/Patcher/` — Windows patcher, setup, restore and self-updater.
+- `src/Plugin/` — BepInEx IL2CPP plugin entry point.
+- `src/RoleCore/` — game-independent role models and match runtime.
+- `roles/roles.json` — 35 original role specifications.
 
-- .github/workflows/build.yml — Windows build pipeline.
-- src/Patcher/ — Windows patcher.
-- src/RoleCore/ — game-independent role/configuration model and match runtime.
-- roles/roles.json — 35 role specifications.
-
-Project source is MIT licensed. Third-party game and mod-loader components are not included; their licenses remain with their respective authors.
+Polus source is MIT licensed. BepInEx, Reactor, and Among Us game libraries remain under their respective licenses. Polus is not affiliated with or endorsed by Innersloth.
