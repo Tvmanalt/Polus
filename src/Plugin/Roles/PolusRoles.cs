@@ -31,14 +31,15 @@ public abstract class PolusImpostorRole : ImpostorRole, ICustomRole
     public bool CanLocalPlayerSeeRole(PlayerControl player) => true;
 }
 
-public abstract class PolusNeutralRole : ImpostorRole, ICustomRole
+public abstract class PolusNeutralRole : CrewmateRole, ICustomRole
 {
     public abstract string IdPart { get; }
     public string IdPrefix => "Polus.Role.Neutral";
     public abstract string RoleName { get; }
     public abstract string RoleDescription { get; }
+    public abstract int ObjectiveTaskGoal { get; }
     public string RoleMedDescription => RoleDescription;
-    public string RoleLongDescription => RoleDescription;
+    public string RoleLongDescription => RoleDescription + $"\\nObjective progress: {(Player ? PolusRoleEvents.GetCompletedTaskCount(Player.PlayerId) : 0)}/{ObjectiveTaskGoal}";
     public Color RoleColor => new Color32(190, 145, 255, 255);
     public ModdedRoleTeams Team => ModdedRoleTeams.Custom;
     public CustomRoleConfiguration Configuration => new(this)
@@ -53,6 +54,7 @@ public abstract class PolusNeutralRole : ImpostorRole, ICustomRole
         TasksCountForProgress = false
     };
     public bool CanLocalPlayerSeeRole(PlayerControl player) => true;
+    public override bool DidWin(GameOverReason gameOverReason) => Player && PolusRoleEvents.GetCompletedTaskCount(Player.PlayerId) >= ObjectiveTaskGoal;
 }
 
 public sealed class CartographerRole : PolusCrewmateRole
@@ -218,6 +220,7 @@ public sealed class ParasiticSignalRole : PolusImpostorRole
 
 public sealed class JigsawRole : PolusNeutralRole
 {
+    public override int ObjectiveTaskGoal => 4;
     public override string IdPart => "jigsaw";
     public override string RoleName => "Jigsaw";
     public override string RoleDescription => "Has a distinct neutral identity and a personal task-completion objective.";
@@ -225,6 +228,7 @@ public sealed class JigsawRole : PolusNeutralRole
 
 public sealed class PilgrimRole : PolusNeutralRole
 {
+    public override int ObjectiveTaskGoal => 5;
     public override string IdPart => "pilgrim";
     public override string RoleName => "Pilgrim";
     public override string RoleDescription => "Has a distinct neutral identity and a longer personal task-completion objective.";
@@ -232,6 +236,7 @@ public sealed class PilgrimRole : PolusNeutralRole
 
 public sealed class CuratorRole : PolusNeutralRole
 {
+    public override int ObjectiveTaskGoal => 4;
     public override string IdPart => "curator";
     public override string RoleName => "Curator";
     public override string RoleDescription => "Has a distinct neutral identity and a personal collection objective.";
@@ -239,6 +244,7 @@ public sealed class CuratorRole : PolusNeutralRole
 
 public sealed class WayfinderRole : PolusNeutralRole
 {
+    public override int ObjectiveTaskGoal => 6;
     public override string IdPart => "wayfinder";
     public override string RoleName => "Wayfinder";
     public override string RoleDescription => "Has a distinct neutral identity and a personal route objective.";
@@ -246,6 +252,7 @@ public sealed class WayfinderRole : PolusNeutralRole
 
 public sealed class CollectorRole : PolusNeutralRole
 {
+    public override int ObjectiveTaskGoal => 5;
     public override string IdPart => "collector";
     public override string RoleName => "Collector";
     public override string RoleDescription => "Has a distinct neutral identity and a personal collection objective.";
@@ -253,6 +260,7 @@ public sealed class CollectorRole : PolusNeutralRole
 
 public sealed class MetronomeRole : PolusNeutralRole
 {
+    public override int ObjectiveTaskGoal => 6;
     public override string IdPart => "metronome";
     public override string RoleName => "Metronome";
     public override string RoleDescription => "Has a distinct neutral identity and a personal sequence objective.";
@@ -260,6 +268,7 @@ public sealed class MetronomeRole : PolusNeutralRole
 
 public sealed class CartoucheRole : PolusNeutralRole
 {
+    public override int ObjectiveTaskGoal => 4;
     public override string IdPart => "cartouche";
     public override string RoleName => "Cartouche";
     public override string RoleDescription => "Has a distinct neutral identity and a personal symbol-pair objective.";
@@ -267,6 +276,7 @@ public sealed class CartoucheRole : PolusNeutralRole
 
 public sealed class LighthouseRole : PolusNeutralRole
 {
+    public override int ObjectiveTaskGoal => 7;
     public override string IdPart => "lighthouse";
     public override string RoleName => "Lighthouse";
     public override string RoleDescription => "Has a distinct neutral identity and a personal signal-chain objective.";
@@ -274,6 +284,7 @@ public sealed class LighthouseRole : PolusNeutralRole
 
 public sealed class WeathervaneRole : PolusNeutralRole
 {
+    public override int ObjectiveTaskGoal => 5;
     public override string IdPart => "weathervane";
     public override string RoleName => "Weathervane";
     public override string RoleDescription => "Has a distinct neutral identity and a personal prediction objective.";
@@ -281,6 +292,7 @@ public sealed class WeathervaneRole : PolusNeutralRole
 
 public sealed class PuzzlewrightRole : PolusNeutralRole
 {
+    public override int ObjectiveTaskGoal => 8;
     public override string IdPart => "puzzlewright";
     public override string RoleName => "Puzzlewright";
     public override string RoleDescription => "Has a distinct neutral identity and a personal logic objective.";
@@ -288,6 +300,7 @@ public sealed class PuzzlewrightRole : PolusNeutralRole
 
 public sealed class TimeCapsuleRole : PolusNeutralRole
 {
+    public override int ObjectiveTaskGoal => 6;
     public override string IdPart => "time_capsule";
     public override string RoleName => "Time Capsule";
     public override string RoleDescription => "Has a distinct neutral identity and a personal before-and-after objective.";
@@ -295,6 +308,7 @@ public sealed class TimeCapsuleRole : PolusNeutralRole
 
 public sealed class NomadRole : PolusNeutralRole
 {
+    public override int ObjectiveTaskGoal => 7;
     public override string IdPart => "nomad";
     public override string RoleName => "Nomad";
     public override string RoleDescription => "Has a distinct neutral identity and a personal travel objective.";
