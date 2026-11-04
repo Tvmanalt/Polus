@@ -15,6 +15,7 @@ public sealed class MainForm : Form
     public MainForm()
     {
         Text = "Polus";
+        Icon = new Icon(Path.Combine(AppContext.BaseDirectory, "polus.ico"));
         Width = 760;
         Height = 500;
         MinimumSize = new Size(680, 430);
