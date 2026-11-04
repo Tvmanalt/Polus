@@ -48,6 +48,9 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
+      - name: Build role core
+        run: dotnet build .\\src\\RoleCore\\RoleCore.csproj -c Release
+
       - name: Publish self-contained Windows x64 app
         run: dotnet publish .\src\Patcher\Patcher.csproj -c Release -r win-x64 --self-contained true
 
