@@ -9,7 +9,7 @@ Polus is a Windows patcher and source scaffold for a host-configured Among Us cu
 - Setup step with confirmation-based game closing and backup workspace.
 - Patch step for a user-selected BepInEx IL2CPP x64 ZIP, with ZIP path-safety checks.
 - Restore support for files touched by the patcher.
-- Catalog of 34 proposed roles and a host-settings validation library.
+- Catalog of 33 original role concepts (12 Crewmate, 11 Impostor, 10 Neutral) and a host-settings validation library.
 - GitHub Actions workflow to compile and package the Windows patcher.
 
 Important: this is a patcher foundation, not a completed 34-role gameplay mod. The catalog entries are role specifications only. Actual Among Us gameplay hooks, role UI, custom RPC integration, and mobile-client compatibility are not implemented. Unmodified mobile clients cannot execute custom client-side roles merely because the host is on PC.
