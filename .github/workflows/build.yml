@@ -3,6 +3,7 @@ name: Build Polus
 on:
   push:
     branches: [main]
+    tags: ['v*']
   workflow_dispatch:
 
 permissions:
@@ -51,7 +52,7 @@ jobs:
             8.0.x
 
       - name: Restore plugin dependencies
-        run: dotnet restore .\\src\\Plugin\\Polus.Plugin.csproj --configfile nuget.config
+        run: dotnet restore .\src\Plugin\Polus.Plugin.csproj --configfile nuget.config
 
       - name: Build plugin and role core
         run: dotnet build .\\src\\Plugin\\Polus.Plugin.csproj -c Release --no-restore
