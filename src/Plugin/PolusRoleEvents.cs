@@ -3,6 +3,7 @@ using System.Linq;
 using MiraAPI.Events;
 using MiraAPI.Events.Vanilla.Meeting;
 using MiraAPI.Events.Vanilla.Player;
+using MiraAPI.GameEnd;
 using MiraAPI.Utilities;
 using Polus.Plugin.Roles;
 
@@ -11,12 +12,20 @@ namespace Polus.Plugin;
 public static class PolusRoleEvents
 {
     private static readonly ConcurrentDictionary<byte, int> CompletedTasks = new();
+    private static readonly ConcurrentDictionary<byte, byte> NeutralWinsTriggered = new();
 
     [RegisterEvent]
     public static void OnTaskCompleted(CompleteTaskEvent ev)
     {
         if (ev.Player == null || ev.Player.Data == null) return;
-        CompletedTasks.AddOrUpdate(ev.Player.PlayerId, 1, (_, count) => count + 1);
+        var count = CompletedTasks.AddOrUpdate(ev.Player.PlayerId, 1, (_, current) => current + 1);
+        if (ev.Player.AmOwner &&
+            ev.Player.Data.Role is PolusNeutralRole neutral &&
+            count >= neutral.ObjectiveTaskGoal &&
+            NeutralWinsTriggered.TryAdd(ev.Player.PlayerId, 0))
+        {
+            CustomGameOver.Trigger<PolusNeutralVictory>([ev.Player.Data]);
+        }
     }
 
     [RegisterEvent]
